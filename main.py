@@ -6,16 +6,6 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from game_master import GameMaster
 
 class PinoyHenyoGUI:
-    """
-    Tkinter GUI that:
-      - Reads a target word
-      - Uses GameMaster to drive the GA
-      - Displays one row per generation, showing that generation’s best string,
-        but ensures that if the best string repeats exactly from the previous
-        generation’s display, we choose the next‐best string in that generation
-        (of the same cost) so that the “displayed guess” changes whenever possible.
-      - Plots convergence (cost vs. generation)
-    """
 
     def __init__(self, master):
         self.master = master
@@ -147,27 +137,18 @@ class PinoyHenyoGUI:
 
         gen, alltime_best, alltime_cost, _ = self.game_master.step()
 
-        # Find this generation’s best candidate and cost
         population = self.game_master.engine.population
-        # Build a list of (candidate, cost) pairs
         pairs = [(ind, self.game_master.engine.compute_cost(ind))
                  for ind in population]
-        # Sort primarily by cost ascending, secondarily lexicographically
         pairs.sort(key=lambda x: (x[1], x[0]))
-
-        # Start with the very best (lowest cost)
         gen_best, gen_best_cost = pairs[0]
 
-        # If that gen_best is the **same** as last displayed, try to pick next
         if gen_best == self.last_displayed_guess:
-            # Look for the next candidate with the same cost but different string
             for cand, cost in pairs:
                 if cost == gen_best_cost and cand != self.last_displayed_guess:
                     gen_best, gen_best_cost = cand, cost
                     break
-            # If no other with same cost, we keep gen_best as-is (all are the same)
 
-        # Insert this generation’s chosen string
         self.tree.insert("", tk.END,
                          values=(gen, gen_best, gen_best_cost))
         self.last_displayed_guess = gen_best

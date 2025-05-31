@@ -2,10 +2,6 @@ import random
 import string
 
 class GeneticAlgorithmGuesser:
-    """
-    A simple GA engine that evolves fixed-length strings toward a target word.
-    Each call to .step() returns (generation, best_guess, best_cost, improved_flag).
-    """
 
     def __init__(self,
                  target_word: str,

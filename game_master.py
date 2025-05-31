@@ -1,13 +1,6 @@
 from guesser import GeneticAlgorithmGuesser
 
 class GameMaster:
-    """
-    Wraps GeneticAlgorithmGuesser, providing:
-      - start(target_word) → (gen, best_guess, best_cost, improved_flag)
-      - step() → (gen, best_guess, best_cost, improved_flag)
-      - is_finished() 
-      - get_best() → (best_guess, best_cost)
-    """
 
     def __init__(self,
                  population_size: int = 20,
