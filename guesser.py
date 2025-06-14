@@ -1,98 +1,84 @@
+# guesser.py
 import random
 import string
 
 class GeneticAlgorithmGuesser:
-
-    def __init__(self,
-                 target_word: str,
-                 population_size: int = 20,
-                 mutation_rate: float = 0.1,
-                 max_generations: int = 1000):
+    def __init__(self, target_word, population_size=20, mutation_rate=0.1, max_generations=1000):
+        # === Initialization of GA Parameters ===
         self.target_word = target_word.lower()
         self.word_length = len(self.target_word)
         self.population_size = population_size
         self.mutation_rate = mutation_rate
         self.max_generations = max_generations
 
-        self.population = []
-        self.best_guess = None
-        self.best_cost = float('inf')
+        # === State Variables ===
+        self.population = []  # Current population
+        self.best_guess = None  # Best individual so far
+        self.best_cost = float('inf')  # Cost of best guess
+        self.generation = 0  # Current generation index
+
+    def random_word(self):
+        # === Generate a Random Word ===
+        return ''.join(random.choice(string.ascii_lowercase) for _ in range(self.word_length))
+
+    def compute_cost(self, guess):
+        # === Fitness Function: Count mismatched letters ===
+        return sum(1 for g, t in zip(guess, self.target_word) if g != t)
+
+    def initialize_population(self):
+        # === Start a New Population ===
+        self.population = [self.random_word() for _ in range(self.population_size)]
         self.generation = 0
 
-    def random_word(self) -> str:
-        return ''.join(random.choice(string.ascii_lowercase)
-                       for _ in range(self.word_length))
+        # Find initial best guess in the population
+        self.best_guess = min(self.population, key=self.compute_cost)
+        self.best_cost = self.compute_cost(self.best_guess)
 
-    def compute_cost(self, guess: str) -> int:
-        return sum(1 for g_char, t_char
-                   in zip(guess, self.target_word)
-                   if g_char != t_char)
+    def select_parents(self):
+        # === Roulette Wheel Selection Based on Inverse Cost ===
+        weights = [1 / (self.compute_cost(ind) + 1) for ind in self.population]
+        return random.choices(self.population, weights=weights, k=2)
 
-    def select_parents(self) -> (str, str):
-        tournament = random.sample(self.population, 3)
-        costs = [(ind, self.compute_cost(ind)) for ind in tournament]
-        costs.sort(key=lambda x: x[1])
-        return costs[0][0], costs[1][0]
-
-    def crossover(self, parent1: str, parent2: str) -> str:
+    def crossover(self, p1, p2):
+        # === One-Point Crossover ===
         if self.word_length < 2:
-            return parent1
+            return p1  # No crossover if word is too short
         point = random.randint(1, self.word_length - 1)
-        return parent1[:point] + parent2[point:]
+        return p1[:point] + p2[point:]
 
-    def mutate(self, word: str) -> str:
+    def mutate(self, word):
+        # === Apply Mutation to a Word ===
         chars = list(word)
         for i in range(self.word_length):
             if random.random() < self.mutation_rate:
                 chars[i] = random.choice(string.ascii_lowercase)
         return ''.join(chars)
 
-    def initialize_population(self):
-        self.population = [self.random_word()
-                           for _ in range(self.population_size)]
-        self.generation = 0
-
-        best = None
-        best_cost = float('inf')
-        for individual in self.population:
-            c = self.compute_cost(individual)
-            if c < best_cost:
-                best, best_cost = individual, c
-
-        self.best_guess = best
-        self.best_cost = best_cost
-
-    def step(self) -> (int, str, int, bool):
+    def step(self):
+        # === One GA Generation Step ===
         if self.best_cost == 0 or self.generation >= self.max_generations:
             return self.generation, self.best_guess, self.best_cost, False
 
-        new_population = [self.best_guess]
-        perfect_found = False
+        # Elitism: carry forward best individuals
+        elites = sorted(self.population, key=self.compute_cost)[:2]
+        new_population = elites.copy()
 
-        while len(new_population) < self.population_size and not perfect_found:
+        # Fill rest of population with children
+        while len(new_population) < self.population_size:
             p1, p2 = self.select_parents()
-            child = self.crossover(p1, p2)
-            child = self.mutate(child)
-
-            child_cost = self.compute_cost(child)
+            child = self.mutate(self.crossover(p1, p2))
             new_population.append(child)
-            if child_cost == 0:
-                perfect_found = True
 
         self.population = new_population
         self.generation += 1
 
-        gen_best = None
-        gen_best_cost = float('inf')
-        for individual in self.population:
-            c = self.compute_cost(individual)
-            if c < gen_best_cost:
-                gen_best, gen_best_cost = individual, c
+        # Evaluate new population for best individual
+        gen_best = min(self.population, key=self.compute_cost)
+        gen_best_cost = self.compute_cost(gen_best)
 
-        improved_flag = False
-        if gen_best_cost < self.best_cost:
-            self.best_cost = gen_best_cost
+        improved = gen_best_cost < self.best_cost
+        if improved:
             self.best_guess = gen_best
-            improved_flag = True
+            self.best_cost = gen_best_cost
 
-        return self.generation, self.best_guess, self.best_cost, improved_flag
+        return self.generation, self.best_guess, self.best_cost, improved
